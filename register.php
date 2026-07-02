@@ -5,6 +5,14 @@ include 'auth.php';
 $message = "";
 $error = "";
 
+// Default role
+$role = "Staff";
+
+// If Admin is logged in, allow choosing role
+if (isLoggedIn() && isAdmin() && isset($_POST['role'])) {
+    $role = $_POST['role'];
+}
+
 if (isset($_POST['register'])) {
 
     $username = trim($_POST['username']);
@@ -38,7 +46,6 @@ if (isset($_POST['register'])) {
         $check = $conn->prepare("SELECT id FROM users WHERE username=? OR email=?");
         $check->bind_param("ss", $username, $email);
         $check->execute();
-
         $result = $check->get_result();
 
         if ($result->num_rows > 0) {
@@ -49,11 +56,9 @@ if (isset($_POST['register'])) {
 
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-            // Automatically assign Staff role
-            $role = "Staff";
-
             $insert = $conn->prepare("
-                INSERT INTO users (username, email, password, role)
+                INSERT INTO users
+                (username, email, password, role)
                 VALUES (?, ?, ?, ?)
             ");
 
@@ -67,7 +72,17 @@ if (isset($_POST['register'])) {
 
             if ($insert->execute()) {
 
-                $message = "Registration Successful! You can now login.";
+                if (isLoggedIn() && isAdmin()) {
+
+                    header("Location: users.php");
+
+                } else {
+
+                    header("Location: login.php");
+
+                }
+
+                exit();
 
             } else {
 
@@ -95,11 +110,26 @@ if (isset($_POST['register'])) {
 
 <body>
 
+<?php
+if (isLoggedIn() && isAdmin()) {
+    include 'navbar.php';
+    echo '<div class="main-content">';
+}
+?>
+
 <div class="login-container">
 
     <h2>Bossing Store</h2>
 
-    <h3>Create Staff Account</h3>
+    <?php if(isLoggedIn() && isAdmin()){ ?>
+
+        <h3>Add New User</h3>
+
+    <?php } else { ?>
+
+        <h3>Create Staff Account</h3>
+
+    <?php } ?>
 
     <?php
 
@@ -145,13 +175,38 @@ if (isset($_POST['register'])) {
         name="confirm_password"
         required>
 
+        <?php if(isLoggedIn() && isAdmin()){ ?>
+
+        <label>Role</label>
+
+        <select name="role">
+
+            <option value="Staff">Staff</option>
+
+            <option value="Admin">Admin</option>
+
+        </select>
+
+        <?php } ?>
+
         <br><br>
 
         <button
         type="submit"
         name="register">
 
-        Register
+        <?php
+
+        if(isLoggedIn() && isAdmin())
+        {
+            echo "Create User";
+        }
+        else
+        {
+            echo "Register";
+        }
+
+        ?>
 
         </button>
 
@@ -159,19 +214,31 @@ if (isset($_POST['register'])) {
 
     <br>
 
-    <p>
+    <?php if(isLoggedIn() && isAdmin()){ ?>
 
-    Already have an account?
+        <a href="users.php">
 
-    <a href="login.php">
+        ← Back to Users
 
-    Login Here
+        </a>
 
-    </a>
+    <?php } else { ?>
 
-    </p>
+        <a href="login.php">
+
+        Already have an account? Login Here
+
+        </a>
+
+    <?php } ?>
 
 </div>
+
+<?php
+if (isLoggedIn() && isAdmin()) {
+    echo "</div>";
+}
+?>
 
 </body>
 
